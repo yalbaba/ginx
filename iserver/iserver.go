@@ -1,4 +1,4 @@
-package server_interface
+package iserver
 
 type IServer interface {
 	Start()

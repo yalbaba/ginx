@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"yalbaba/ginx/util"
 )
 
 type GServer struct {
@@ -11,7 +12,6 @@ type GServer struct {
 	IpVersion string `json:"ip_version"`
 	Addr      string `json:"addr"`
 	Port      int    `json:"port"`
-	close     chan interface{}
 }
 
 func NewGServer(name, addr string, port int) *GServer {
@@ -20,8 +20,13 @@ func NewGServer(name, addr string, port int) *GServer {
 		IpVersion: "tcp4",
 		Addr:      addr,
 		Port:      port,
-		close:     make(chan interface{}),
 	}
+}
+
+//自定义的处理业务
+func (s *GServer) Handle(conn *net.TCPConn, bytes []byte, cnt int) error {
+	_, err := conn.Write([]byte("收到了请求"))
+	return err
 }
 
 func (s *GServer) Start() {
@@ -44,29 +49,15 @@ func (s *GServer) Start() {
 
 		// 阻塞获取客户端请求
 		for {
-			conn, err := listener.Accept()
+			conn, err := listener.AcceptTCP()
 			if err != nil {
 				log.Fatalf("accept err:%v", err)
 				continue
 			}
 
 			// 获取请求内容，执行操作
-			go func() {
-				for {
-					buf := make([]byte, 512)
-					_, err := conn.Read(buf)
-					if err != nil {
-						log.Fatalf("get client msg err:%v", err)
-						continue
-					}
-
-					log.Printf("client msg:%s\n", string(buf))
-					// 应答客户端
-					if _, err = conn.Write([]byte("收到请求")); err != nil {
-						log.Fatalf("reply err:%v", err)
-					}
-				}
-			}()
+			dealConn := NewGConn(conn, util.GetConnId(), s.Handle)
+			go dealConn.Start()
 		}
 	}()
 }
@@ -81,10 +72,6 @@ func (s *GServer) Serve() error {
 	// todo 做点其他初始化服务器业务
 
 	// 阻塞
-	select {
-	case <-s.close:
-		// 关闭服务器
-		s.Stop()
-	}
+	select {}
 	return nil
 }
