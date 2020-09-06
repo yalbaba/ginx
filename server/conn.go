@@ -9,7 +9,7 @@ import (
 type GConn struct {
 	ConnId uint32
 
-	TcpConn *net.TCPConn
+	Conn *net.TCPConn
 
 	isClosed bool
 
@@ -21,7 +21,7 @@ type GConn struct {
 func NewGConn(conn *net.TCPConn, connId uint32, handler iserver.Handler) *GConn {
 	return &GConn{
 		ConnId:    connId,
-		TcpConn:   conn,
+		Conn:      conn,
 		HandleFuc: handler,
 		isClosed:  false,
 		CloseCh:   make(chan struct{}),
@@ -38,15 +38,15 @@ func (c *GConn) StartRead() {
 
 		buf := make([]byte, 512)
 		//todo 解决eof错误
-		if _, err := c.TcpConn.Read(buf); err != nil {
+		if _, err := c.Conn.Read(buf); err != nil {
 			fmt.Println("read data err:", err.Error())
-			continue
+			break
 		}
 
 		fmt.Println("accept data:", string(buf))
 
 		// 执行自定义的业务
-		if err := c.HandleFuc(c.TcpConn, buf, 512); err != nil {
+		if err := c.HandleFuc(c.Conn, buf, 512); err != nil {
 			fmt.Println("handleFuc err:", err.Error())
 			break
 		}
@@ -62,7 +62,7 @@ func (c *GConn) Start() {
 }
 
 func (c *GConn) Stop() {
-	if err := c.TcpConn.Close(); err != nil {
+	if err := c.Conn.Close(); err != nil {
 		fmt.Println("stop err", err.Error())
 		return
 	}
@@ -80,15 +80,15 @@ func (c *GConn) GetConnId() uint32 {
 }
 
 func (c *GConn) GetTcpConn() *net.TCPConn {
-	return c.TcpConn
+	return c.Conn
 }
 
 func (c *GConn) GetRemoteAddr() net.Addr {
-	return c.TcpConn.RemoteAddr()
+	return c.Conn.RemoteAddr()
 }
 
 func (c *GConn) Send(data []byte) error {
-	if _, err := c.TcpConn.Write(data); err != nil {
+	if _, err := c.Conn.Write(data); err != nil {
 		fmt.Println("send err:", err.Error())
 		return err
 	}
