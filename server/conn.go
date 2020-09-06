@@ -13,18 +13,18 @@ type GConn struct {
 
 	isClosed bool
 
-	HandleFuc iserver.Handler
+	Router iserver.IRouter
 
 	CloseCh chan struct{}
 }
 
-func NewGConn(conn *net.TCPConn, connId uint32, handler iserver.Handler) *GConn {
+func NewGConn(conn *net.TCPConn, connId uint32, router iserver.IRouter) *GConn {
 	return &GConn{
-		ConnId:    connId,
-		Conn:      conn,
-		HandleFuc: handler,
-		isClosed:  false,
-		CloseCh:   make(chan struct{}),
+		ConnId:   connId,
+		Conn:     conn,
+		Router:   router,
+		isClosed: false,
+		CloseCh:  make(chan struct{}),
 	}
 }
 
@@ -44,12 +44,16 @@ func (c *GConn) StartRead() {
 		}
 
 		fmt.Println("accept data:", string(buf))
-
-		// 执行自定义的业务
-		if err := c.HandleFuc(c.Conn, buf, 512); err != nil {
-			fmt.Println("handleFuc err:", err.Error())
-			break
+		// 获取请求对象
+		request := &Request{
+			conn: c,
+			data: buf,
 		}
+
+		// 执行用户添加的的业务
+		c.Router.PreHandle(request)
+		c.Router.Handle(request)
+		c.Router.PostHandle(request)
 
 	}
 }

@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"yalbaba/ginx/iserver"
 	"yalbaba/ginx/util"
 )
 
 type GServer struct {
-	Name      string `json:"name"`
-	IpVersion string `json:"ip_version"`
-	Addr      string `json:"addr"`
-	Port      int    `json:"port"`
+	Name      string          `json:"name"`
+	IpVersion string          `json:"ip_version"`
+	Addr      string          `json:"addr"`
+	Port      int             `json:"port"`
+	Router    iserver.IRouter //自定义的处理业务
 }
 
 func NewGServer(name, addr string, port int) *GServer {
@@ -20,17 +22,11 @@ func NewGServer(name, addr string, port int) *GServer {
 		IpVersion: "tcp4",
 		Addr:      addr,
 		Port:      port,
+		Router:    nil,
 	}
 }
 
-//自定义的处理业务
-func (s *GServer) Handle(conn *net.TCPConn, bytes []byte, cnt int) error {
-	_, err := conn.Write([]byte("收到了请求"))
-	return err
-}
-
 func (s *GServer) Start() {
-
 	go func() {
 		// 获取addr
 		addr, err := net.ResolveTCPAddr(s.IpVersion, fmt.Sprintf("%s:%d", s.Addr, s.Port))
@@ -56,7 +52,7 @@ func (s *GServer) Start() {
 			}
 
 			// 获取请求内容，执行操作
-			dealConn := NewGConn(conn, util.GetConnId(), s.Handle)
+			dealConn := NewGConn(conn, util.GetConnId(), s.Router)
 			go dealConn.Start()
 		}
 	}()
@@ -74,4 +70,8 @@ func (s *GServer) Serve() error {
 	// 阻塞
 	select {}
 	return nil
+}
+
+func (s *GServer) AddRouter(router iserver.IRouter) {
+	s.Router = router
 }
