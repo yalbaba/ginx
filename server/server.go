@@ -27,6 +27,11 @@ func NewGServer(name, addr string, port int) *GServer {
 }
 
 func (s *GServer) Start() {
+	if s.Router == nil {
+		log.Fatalf("路由方法为空")
+		return
+	}
+
 	go func() {
 		// 获取addr
 		addr, err := net.ResolveTCPAddr(s.IpVersion, fmt.Sprintf("%s:%d", s.Addr, s.Port))
