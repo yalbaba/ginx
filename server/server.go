@@ -6,6 +6,7 @@ import (
 	"net"
 	"yalbaba/ginx/iserver"
 	"yalbaba/ginx/util"
+	"yalbaba/ginx/util/global_conf"
 )
 
 type GServer struct {
@@ -13,15 +14,17 @@ type GServer struct {
 	IpVersion string          `json:"ip_version"`
 	Addr      string          `json:"addr"`
 	Port      int             `json:"port"`
+	MaxConns  int             `json:"max_conns"`
 	Router    iserver.IRouter //自定义的处理业务
 }
 
-func NewGServer(name, addr string, port int) *GServer {
+func NewGServer() *GServer {
 	return &GServer{
-		Name:      name,
-		IpVersion: "tcp4",
-		Addr:      addr,
-		Port:      port,
+		Name:      global_conf.GlobalConfObj.Name,
+		IpVersion: global_conf.GlobalConfObj.IpVersion,
+		Addr:      global_conf.GlobalConfObj.Host,
+		Port:      global_conf.GlobalConfObj.Port,
+		MaxConns:  global_conf.GlobalConfObj.MaxConn,
 		Router:    nil,
 	}
 }

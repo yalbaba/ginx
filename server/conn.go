@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"yalbaba/ginx/iserver"
+	"yalbaba/ginx/util/global_conf"
 )
 
 type GConn struct {
@@ -36,7 +37,7 @@ func (c *GConn) StartRead() {
 
 	for {
 
-		buf := make([]byte, 512)
+		buf := make([]byte, global_conf.GlobalConfObj.MaxPackageSize)
 		//todo 解决eof错误
 		if _, err := c.Conn.Read(buf); err != nil {
 			fmt.Println("read data err:", err.Error())
@@ -51,9 +52,9 @@ func (c *GConn) StartRead() {
 		}
 
 		// 执行用户添加的的业务
-		c.Router.PreHandle(request)
+		//c.Router.PreHandle(request)
 		c.Router.Handle(request)
-		c.Router.PostHandle(request)
+		//c.Router.PostHandle(request)
 
 	}
 }

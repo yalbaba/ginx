@@ -1,6 +1,8 @@
-package util
+package global_conf
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestGlobalConf_Reload(t *testing.T) {
 	g := GlobalConf{}

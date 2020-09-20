@@ -1,0 +1,8 @@
+{
+  "name": "myserver",
+  "port": 9099,
+  "host": "127.0.0.1",
+  "ip_version": "tcp4",
+  "max_conn": 100,
+  "max_package_size": 512
+}
