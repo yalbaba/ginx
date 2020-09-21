@@ -12,7 +12,7 @@ type GlobalConf struct {
 	Host           string `json:"host"`
 	IpVersion      string `json:"ip_version"`
 	MaxConn        int    `json:"max_conn"`         //最大连接数
-	MaxPackageSize int    `json:"max_package_size"` //最大传输包大小
+	MaxPackageSize uint32 `json:"max_package_size"` //最大传输包大小
 }
 
 var GlobalConfObj *GlobalConf
