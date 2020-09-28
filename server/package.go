@@ -50,13 +50,12 @@ func (p *Package) UnPack(data []byte) (iserver.IMessage, error) {
 	msg := &Message{}
 
 	//读长度
-	binary.Read(buf, binary.LittleEndian, msg.DataLen)
+	binary.Read(buf, binary.LittleEndian, &msg.DataLen)
 
 	if global_conf.GlobalConfObj.MaxPackageSize > 0 && global_conf.GlobalConfObj.MaxPackageSize < msg.DataLen {
 		return nil, fmt.Errorf("data is too big")
 	}
 
-	binary.Read(buf, binary.LittleEndian, msg.Id)
-
+	binary.Read(buf, binary.LittleEndian, &msg.Id)
 	return msg, nil
 }
