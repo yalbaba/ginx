@@ -13,7 +13,7 @@ type IConn interface {
 
 	GetRemoteAddr() net.Addr
 
-	Send(data []byte) error
+	Send(msgId uint32, data []byte) error
 }
 
 // 收到请求后的回调方法

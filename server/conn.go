@@ -2,9 +2,9 @@ package server
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"yalbaba/ginx/iserver"
-	"yalbaba/ginx/util/global_conf"
 )
 
 type GConn struct {
@@ -34,21 +34,36 @@ func (c *GConn) StartRead() {
 
 	//断开连接后要关闭连接
 	defer c.Stop()
-
+	dp := NewPackage()
+	dataHead := make([]byte, dp.GetHeadLen())
 	for {
-
-		buf := make([]byte, global_conf.GlobalConfObj.MaxPackageSize)
-		//todo 解决eof错误
-		if _, err := c.Conn.Read(buf); err != nil {
-			fmt.Println("read data err:", err.Error())
+		//获取每个包的头
+		if _, err := io.ReadFull(c.Conn, dataHead); err != nil {
+			fmt.Println(err)
 			break
 		}
-
-		fmt.Println("accept data:", string(buf))
+		//获取每个包体
+		msgHead, err := dp.UnPack(dataHead)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+		//根据头信息获取包体
+		msg := msgHead.(*Message)
+		if msgHead.GetLen() > 0 {
+			//表示该包有数据
+			msg.Data = make([]byte, msg.GetLen())
+			_, err := io.ReadFull(c.Conn, msg.Data)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fmt.Println("这是本包的内容:", msg)
+		}
 		// 获取请求对象
 		request := &Request{
 			conn: c,
-			data: buf,
+			data: msg,
 		}
 
 		// 执行用户添加的的业务
@@ -92,10 +107,15 @@ func (c *GConn) GetRemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
 }
 
-func (c *GConn) Send(data []byte) error {
-	if _, err := c.Conn.Write(data); err != nil {
-		fmt.Println("send err:", err.Error())
+func (c *GConn) Send(msgId uint32, data []byte) error {
+	dp := NewPackage()
+	//对消息进行打包
+	msg := NewMessage(msgId, data)
+	dataByte, err := dp.Pack(msg)
+	if err != nil {
 		return err
 	}
+	//进行回写
+	c.Conn.Write(dataByte)
 	return nil
 }

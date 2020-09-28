@@ -15,6 +15,10 @@ import (
 type Package struct {
 }
 
+func NewPackage() *Package {
+	return &Package{}
+}
+
 //获取头部的长度
 func (p *Package) GetHeadLen() uint32 {
 	//这里定义数据包协议的头部长度

@@ -6,5 +6,9 @@ type IRequest interface {
 	GetConn() IConn
 
 	// 获取数据
-	GetData() []byte
+	GetData() IMessage
+
+	GetDataLen() uint32
+
+	GetMessageId() uint32
 }
