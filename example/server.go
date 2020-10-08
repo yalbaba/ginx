@@ -7,8 +7,8 @@ import (
 )
 
 func main() {
-	s := server.NewGServer("testServer", "127.0.0.1", 9090)
-	s.AddRouter(&MyRouter{})
+	s := server.NewGServer()
+	s.AddRouter(0, &MyRouter{})
 	s.Serve()
 }
 

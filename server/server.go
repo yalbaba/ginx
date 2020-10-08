@@ -10,12 +10,12 @@ import (
 )
 
 type GServer struct {
-	Name      string          `json:"name"`
-	IpVersion string          `json:"ip_version"`
-	Addr      string          `json:"addr"`
-	Port      int             `json:"port"`
-	MaxConns  int             `json:"max_conns"`
-	Router    iserver.IRouter //自定义的处理业务
+	Name      string              `json:"name"`
+	IpVersion string              `json:"ip_version"`
+	Addr      string              `json:"addr"`
+	Port      int                 `json:"port"`
+	MaxConns  int                 `json:"max_conns"`
+	Handler   iserver.IMsgHandler //自定义的处理业务
 }
 
 func NewGServer() *GServer {
@@ -25,13 +25,13 @@ func NewGServer() *GServer {
 		Addr:      global_conf.GlobalConfObj.Host,
 		Port:      global_conf.GlobalConfObj.Port,
 		MaxConns:  global_conf.GlobalConfObj.MaxConn,
-		Router:    nil,
+		Handler:   NewMsgHandler(),
 	}
 }
 
 func (s *GServer) Start() {
-	if s.Router == nil {
-		log.Fatalf("路由方法为空")
+	if len(s.Handler.(*MsgHandler).ApisHandler) == 0 {
+		log.Fatalf("未注册router")
 		return
 	}
 
@@ -60,7 +60,7 @@ func (s *GServer) Start() {
 			}
 
 			// 获取请求内容，执行操作
-			dealConn := NewGConn(conn, util.GetConnId(), s.Router)
+			dealConn := NewGConn(conn, util.GetConnId(), s.Handler)
 			go dealConn.Start()
 		}
 	}()
@@ -73,13 +73,13 @@ func (s *GServer) Stop() {
 func (s *GServer) Serve() error {
 	s.Start()
 
-	// todo 做点其他初始化服务器业务
+	// todo 做点其他初始化服务器业务(比如初始化中间件和数据库)
 
 	// 阻塞
 	select {}
 	return nil
 }
 
-func (s *GServer) AddRouter(router iserver.IRouter) {
-	s.Router = router
+func (s *GServer) AddRouter(msgId uint32, router iserver.IRouter) {
+	s.Handler.AddRouter(msgId, router)
 }

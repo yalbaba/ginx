@@ -4,5 +4,5 @@ type IServer interface {
 	Start()
 	Stop()
 	Serve() error
-	AddRouter(router IRouter)
+	AddRouter(msgId uint32, router IRouter) //根据msgId不同处理的逻辑不同
 }

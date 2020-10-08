@@ -14,18 +14,18 @@ type GConn struct {
 
 	isClosed bool
 
-	Router iserver.IRouter
+	MsgHandler iserver.IMsgHandler
 
 	CloseCh chan struct{}
 }
 
-func NewGConn(conn *net.TCPConn, connId uint32, router iserver.IRouter) *GConn {
+func NewGConn(conn *net.TCPConn, connId uint32, msgHandler iserver.IMsgHandler) *GConn {
 	return &GConn{
-		ConnId:   connId,
-		Conn:     conn,
-		Router:   router,
-		isClosed: false,
-		CloseCh:  make(chan struct{}),
+		ConnId:     connId,
+		Conn:       conn,
+		MsgHandler: msgHandler,
+		isClosed:   false,
+		CloseCh:    make(chan struct{}),
 	}
 }
 
@@ -68,7 +68,7 @@ func (c *GConn) StartRead() {
 
 		// 执行用户添加的的业务
 		//c.Router.PreHandle(request)
-		c.Router.Handle(request)
+		go c.MsgHandler.DoHandle(request)
 		//c.Router.PostHandle(request)
 
 	}

@@ -2,6 +2,7 @@ package iserver
 
 import "net"
 
+//封装连接的接口
 type IConn interface {
 	Start()
 
@@ -15,6 +16,3 @@ type IConn interface {
 
 	Send(msgId uint32, data []byte) error
 }
-
-// 收到请求后的回调方法
-type Handler func(conn *net.TCPConn, bytes []byte, cnt int) error
