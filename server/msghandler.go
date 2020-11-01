@@ -21,7 +21,7 @@ func (m *MsgHandler) DoHandle(request iserver.IRequest) {
 
 func (m *MsgHandler) AddRouter(msgId uint32, router iserver.IRouter) {
 	if _, ok := m.ApisHandler[msgId]; ok {
-		log.Println("该路由已注册过")
+		log.Fatalf("该路由已注册过")
 		return
 	}
 	m.ApisHandler[msgId] = router

@@ -14,5 +14,5 @@ type IConn interface {
 
 	GetRemoteAddr() net.Addr
 
-	Send(msgId uint32, data []byte) error
+	SendMsg(msgId uint32, data []byte) error
 }

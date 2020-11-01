@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"yalbaba/ginx/iserver"
 )
@@ -16,6 +17,10 @@ type GConn struct {
 
 	MsgHandler iserver.IMsgHandler
 
+	//用于写模块接收消息的通道
+	msgChannel chan []byte
+
+	//客户端断开连接，关闭当前连接的通道
 	CloseCh chan struct{}
 }
 
@@ -25,6 +30,7 @@ func NewGConn(conn *net.TCPConn, connId uint32, msgHandler iserver.IMsgHandler) 
 		Conn:       conn,
 		MsgHandler: msgHandler,
 		isClosed:   false,
+		msgChannel: make(chan []byte),
 		CloseCh:    make(chan struct{}),
 	}
 }
@@ -34,9 +40,11 @@ func (c *GConn) StartRead() {
 
 	//断开连接后要关闭连接
 	defer c.Stop()
+
 	dp := NewPackage()
 	dataHead := make([]byte, dp.GetHeadLen())
 	for {
+		//以下是解析消息
 		//获取每个包的头
 		if _, err := io.ReadFull(c.Conn, dataHead); err != nil {
 			fmt.Println(err)
@@ -74,11 +82,28 @@ func (c *GConn) StartRead() {
 	}
 }
 
+func (c *GConn) StartWrite() {
+	log.Println("开始进行回写消息给客户端")
+	defer log.Println("客户端已断开连接")
+	select {
+	case data := <-c.msgChannel:
+		//服务端给客户端写数据
+		_, err := c.Conn.Write(data)
+		if err != nil {
+			log.Fatalf("服务端给客户端写数据失败,err:%v", err)
+			return
+		}
+	case <-c.CloseCh:
+		return
+	}
+}
+
 func (c *GConn) Start() {
 
 	// 服务器内部读取数据后执行的流程
 	go c.StartRead()
-	// todo 写数据的方法
+	// 服务端回写数据流程
+	go c.StartWrite()
 }
 
 func (c *GConn) Stop() {
@@ -92,7 +117,11 @@ func (c *GConn) Stop() {
 	}
 
 	c.isClosed = true
+	c.CloseCh <- struct{}{}
+
 	close(c.CloseCh)
+	close(c.msgChannel)
+
 }
 
 func (c *GConn) GetConnId() uint32 {
@@ -107,7 +136,11 @@ func (c *GConn) GetRemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
 }
 
-func (c *GConn) Send(msgId uint32, data []byte) error {
+func (c *GConn) SendMsg(msgId uint32, data []byte) error {
+	if c.isClosed {
+		return fmt.Errorf("连接已关闭")
+	}
+
 	dp := NewPackage()
 	//对消息进行打包
 	msg := NewMessage(msgId, data)
@@ -115,7 +148,8 @@ func (c *GConn) Send(msgId uint32, data []byte) error {
 	if err != nil {
 		return err
 	}
-	//进行回写
-	c.Conn.Write(dataByte)
+
+	//发送消息到通道给写数据协程
+	c.msgChannel <- dataByte
 	return nil
 }
