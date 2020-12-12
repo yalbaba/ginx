@@ -68,17 +68,20 @@ func (c *GConn) StartRead() {
 			}
 			fmt.Println("这是本包的内容:", msg)
 		}
-		// 获取请求对象
+
+		// 构建请求对象
 		request := &Request{
 			conn: c,
 			data: msg,
 		}
 
-		// 执行用户添加的的业务
+		// 执行用户添加的的业务 不能来一个请求就开一个协程，要控制数量
 		//c.Router.PreHandle(request)
-		go c.MsgHandler.DoHandle(request)
+		//go c.MsgHandler.DoHandle(request)
 		//c.Router.PostHandle(request)
 
+		// 之前的开启协程来读写改为提交到工作池中
+		c.MsgHandler.SendMessageToPool(c.GetConnId(), request)
 	}
 }
 
