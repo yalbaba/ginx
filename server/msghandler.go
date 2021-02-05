@@ -44,7 +44,7 @@ func (m *MsgHandler) StartWorkerPool() {
 }
 
 func (m *MsgHandler) StartOneWorker(workerId uint32, queue chan iserver.IRequest) {
-	fmt.Printf("id为:%d 的worker启动了", workerId)
+	fmt.Printf("id为:%d 的worker启动了\n", workerId)
 	for {
 		select {
 		case request := <-queue:

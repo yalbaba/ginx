@@ -34,6 +34,6 @@ func init() {
 }
 
 func (g *GlobalConf) Reload() {
-	data, _ := ioutil.ReadFile("../config/ginx.json")
+	data, _ := ioutil.ReadFile("/Users/dr.yang/go/src/yalbaba/ginx/config/ginx.json")
 	json.Unmarshal(data, g)
 }

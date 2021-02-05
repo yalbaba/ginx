@@ -44,7 +44,6 @@ func (c *GConn) StartRead() {
 	dp := NewPackage()
 	dataHead := make([]byte, dp.GetHeadLen())
 	for {
-		//以下是解析消息
 		//获取每个包的头
 		if _, err := io.ReadFull(c.Conn, dataHead); err != nil {
 			fmt.Println(err)
@@ -66,7 +65,7 @@ func (c *GConn) StartRead() {
 				fmt.Println(err)
 				return
 			}
-			fmt.Println("这是本包的内容:", msg)
+			fmt.Println("id:", msg.Id, "len:", msg.DataLen, "data:", string(msg.Data))
 		}
 
 		// 构建请求对象

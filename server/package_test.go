@@ -89,6 +89,4 @@ func TestPackage(t *testing.T) {
 	send1 = append(send1, send2...)
 	conn.Write(send1)
 
-	select {}
-
 }

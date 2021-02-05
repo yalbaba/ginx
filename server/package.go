@@ -52,7 +52,6 @@ func (p *Package) UnPack(data []byte) (iserver.IMessage, error) {
 	buf := bytes.NewReader(data)
 
 	msg := &Message{}
-
 	//读长度
 	binary.Read(buf, binary.LittleEndian, &msg.DataLen)
 

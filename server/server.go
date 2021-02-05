@@ -36,6 +36,9 @@ func (s *GServer) Start() {
 	}
 
 	go func() {
+		// 开启工作池
+		s.Handler.StartWorkerPool()
+
 		// 获取addr
 		addr, err := net.ResolveTCPAddr(s.IpVersion, fmt.Sprintf("%s:%d", s.Addr, s.Port))
 		if err != nil {
