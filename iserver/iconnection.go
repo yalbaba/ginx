@@ -17,4 +17,11 @@ type IConnection interface {
 	SendMsg(msgId uint32, data []byte) error
 
 	SendBuffMsg(msgId uint32, data []byte) error //发送缓冲消息
+
+	//设置链接属性
+	SetProperty(key string, value interface{})
+	//获取链接属性
+	GetProperty(key string) (interface{}, error)
+	//移除链接属性
+	RemoveProperty(key string)
 }

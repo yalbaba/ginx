@@ -5,11 +5,12 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 	"yalbaba/ginx/iserver"
 	"yalbaba/ginx/util/global_conf"
 )
 
-type GConn struct {
+type GConnection struct {
 	TcpServer iserver.IServer
 
 	ConnId uint32
@@ -28,10 +29,15 @@ type GConn struct {
 
 	//客户端断开连接，关闭当前连接的通道
 	closeCh chan struct{}
+
+	//链接属性
+	property map[string]interface{}
+	//保护链接属性修改的锁
+	sync.RWMutex
 }
 
-func NewGConn(s iserver.IServer, conn *net.TCPConn, connId uint32, msgHandler iserver.IMsgHandler) *GConn {
-	return &GConn{
+func NewGConn(s iserver.IServer, conn *net.TCPConn, connId uint32, msgHandler iserver.IMsgHandler) *GConnection {
+	return &GConnection{
 		TcpServer:      s,
 		ConnId:         connId,
 		Conn:           conn,
@@ -44,7 +50,7 @@ func NewGConn(s iserver.IServer, conn *net.TCPConn, connId uint32, msgHandler is
 }
 
 // 这是服务器内部的读取数据的方法，不包括业务，具体业务是handlerfunc
-func (c *GConn) StartRead() {
+func (c *GConnection) StartRead() {
 
 	//断开连接后要关闭连接
 	defer c.Stop()
@@ -92,7 +98,7 @@ func (c *GConn) StartRead() {
 	}
 }
 
-func (c *GConn) StartWrite() {
+func (c *GConnection) StartWrite() {
 	log.Println("开始进行回写消息给客户端...")
 	defer c.Stop()
 
@@ -122,7 +128,7 @@ func (c *GConn) StartWrite() {
 
 }
 
-func (c *GConn) Start() {
+func (c *GConnection) Start() {
 
 	// 服务器内部读取数据后执行的流程
 	go c.StartRead()
@@ -135,7 +141,7 @@ func (c *GConn) Start() {
 	}
 }
 
-func (c *GConn) Stop() {
+func (c *GConnection) Stop() {
 
 	if c.isClosed {
 		fmt.Println("conn is closed")
@@ -160,19 +166,19 @@ func (c *GConn) Stop() {
 
 }
 
-func (c *GConn) GetConnId() uint32 {
+func (c *GConnection) GetConnId() uint32 {
 	return c.ConnId
 }
 
-func (c *GConn) GetTcpConn() *net.TCPConn {
+func (c *GConnection) GetTcpConn() *net.TCPConn {
 	return c.Conn
 }
 
-func (c *GConn) GetRemoteAddr() net.Addr {
+func (c *GConnection) GetRemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
 }
 
-func (c *GConn) SendMsg(msgId uint32, data []byte) error {
+func (c *GConnection) SendMsg(msgId uint32, data []byte) error {
 	if c.isClosed {
 		return fmt.Errorf("连接已关闭")
 	}
@@ -190,7 +196,7 @@ func (c *GConn) SendMsg(msgId uint32, data []byte) error {
 	return nil
 }
 
-func (c *GConn) SendBuffMsg(msgId uint32, data []byte) error {
+func (c *GConnection) SendBuffMsg(msgId uint32, data []byte) error {
 
 	if c.isClosed {
 		return fmt.Errorf("连接已关闭")
@@ -207,4 +213,28 @@ func (c *GConn) SendBuffMsg(msgId uint32, data []byte) error {
 	//发送消息到通道给写数据协程
 	c.msgChannel <- dataByte
 	return nil
+}
+
+//设置链接属性
+func (c *GConnection) SetProperty(key string, value interface{}) {
+	c.Lock()
+	defer c.Unlock()
+	c.property[key] = value
+}
+
+//获取链接属性
+func (c *GConnection) GetProperty(key string) (interface{}, error) {
+	c.RLock()
+	defer c.RUnlock()
+	if value, ok := c.property[key]; ok {
+		return value, nil
+	}
+	return nil, fmt.Errorf("该属性不存在")
+}
+
+//移除链接属性
+func (c *GConnection) RemoveProperty(key string) {
+	c.Lock()
+	defer c.Unlock()
+	delete(c.property, key)
 }
