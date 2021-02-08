@@ -3,11 +3,11 @@ package server
 import "yalbaba/ginx/iserver"
 
 type Request struct {
-	conn iserver.IConn
+	conn iserver.IConnection
 	data iserver.IMessage
 }
 
-func (r *Request) GetConn() iserver.IConn {
+func (r *Request) GetConn() iserver.IConnection {
 	return r.conn
 }
 

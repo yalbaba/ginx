@@ -11,30 +11,30 @@ import (
 */
 
 type ConnManager struct {
-	connections map[uint32]iserver.IConn
+	connections map[uint32]iserver.IConnection
 	sync.Mutex
 }
 
 func NewConnManager() iserver.IConnManager {
 	return &ConnManager{
-		connections: make(map[uint32]iserver.IConn),
+		connections: make(map[uint32]iserver.IConnection),
 	}
 }
 
-func (c *ConnManager) Add(conn iserver.IConn) {
+func (c *ConnManager) Add(conn iserver.IConnection) {
 
 	c.Lock()
 	defer c.Unlock()
 	c.connections[conn.GetConnId()] = conn
 }
 
-func (c *ConnManager) Remove(conn iserver.IConn) {
+func (c *ConnManager) Remove(conn iserver.IConnection) {
 
 	c.Lock()
 	defer c.Unlock()
 	delete(c.connections, conn.GetConnId())
 }
-func (c *ConnManager) Get(connId uint32) (iserver.IConn, error) {
+func (c *ConnManager) Get(connId uint32) (iserver.IConnection, error) {
 
 	c.Lock()
 	defer c.Unlock()

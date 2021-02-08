@@ -3,7 +3,7 @@ package iserver
 import "net"
 
 //封装连接的接口
-type IConn interface {
+type IConnection interface {
 	Start()
 
 	Stop()

@@ -53,7 +53,7 @@ func (c *GConn) StartRead() {
 	dataHead := make([]byte, dp.GetHeadLen())
 	for {
 		//获取每个包的头
-		if _, err := io.ReadFull(c.Conn, dataHead); err != nil {
+		if _, err := io.ReadFull(c.Conn, dataHead); err != nil && err != io.EOF {
 			fmt.Println(err)
 			break
 		}
@@ -93,26 +93,33 @@ func (c *GConn) StartRead() {
 }
 
 func (c *GConn) StartWrite() {
-	log.Println("开始进行回写消息给客户端")
-	defer log.Println("客户端已断开连接")
-	select {
-	case data := <-c.msgChannel:
-		//服务端给客户端写数据
-		_, err := c.Conn.Write(data)
-		if err != nil {
-			log.Fatalf("服务端给客户端写数据失败,err:%v", err)
+	log.Println("开始进行回写消息给客户端...")
+	defer c.Stop()
+
+	for {
+		select {
+		case data := <-c.msgChannel:
+			//服务端给客户端写数据
+			_, err := c.Conn.Write(data)
+			if err != nil {
+				log.Fatalf("服务端给客户端写数据失败,err:%v", err)
+				return
+			}
+			log.Println("回写消息结束...")
+		case data := <-c.msgBuffChannel:
+			//服务端给客户端写数据
+			_, err := c.Conn.Write(data)
+			if err != nil {
+				log.Fatalf("服务端给客户端写数据失败,err:%v", err)
+				return
+			}
+			log.Println("回写缓冲消息结束...")
+		case <-c.closeCh:
+			log.Println("连接关闭...")
 			return
 		}
-	case data := <-c.msgBuffChannel:
-		//服务端给客户端写数据
-		_, err := c.Conn.Write(data)
-		if err != nil {
-			log.Fatalf("服务端给客户端写数据失败,err:%v", err)
-			return
-		}
-	case <-c.closeCh:
-		return
 	}
+
 }
 
 func (c *GConn) Start() {
@@ -121,6 +128,11 @@ func (c *GConn) Start() {
 	go c.StartRead()
 	// 服务端回写数据流程
 	go c.StartWrite()
+
+	//开启链接回调函数
+	if c.TcpServer.GetOnConnStart() != nil {
+		c.TcpServer.CallOnConnStart(c)
+	}
 }
 
 func (c *GConn) Stop() {
@@ -136,10 +148,13 @@ func (c *GConn) Stop() {
 	}
 
 	c.isClosed = true
+
+	if c.TcpServer.GetOnConnStop() != nil {
+		c.TcpServer.CallOnConnStop(c)
+	}
+
 	c.closeCh <- struct{}{}
-
 	c.TcpServer.GetConnManager().Remove(c)
-
 	close(c.closeCh)
 	close(c.msgChannel)
 
@@ -158,7 +173,6 @@ func (c *GConn) GetRemoteAddr() net.Addr {
 }
 
 func (c *GConn) SendMsg(msgId uint32, data []byte) error {
-
 	if c.isClosed {
 		return fmt.Errorf("连接已关闭")
 	}

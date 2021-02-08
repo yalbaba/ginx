@@ -10,13 +10,16 @@ import (
 )
 
 type GServer struct {
-	Name      string
-	IpVersion string
-	Addr      string
-	Port      int
-	MaxConns  int
-	Handler   iserver.IMsgHandler  //自定义的处理业务
-	ConnMgr   iserver.IConnManager //连接管理器
+	Name        string
+	IpVersion   string
+	Addr        string
+	Port        int
+	MaxConns    int
+	Handler     iserver.IMsgHandler       //自定义的处理业务
+	ConnMgr     iserver.IConnManager      //连接管理器
+	OnConnStart func(iserver.IConnection) //链接创建回调
+	OnConnStop  func(iserver.IConnection) //链接关闭回调
+
 }
 
 func NewGServer() *GServer {
@@ -58,19 +61,21 @@ func (s *GServer) Start() {
 
 		// 阻塞获取客户端请求
 		for {
+			conn, err := listener.AcceptTCP()
+			if err != nil {
+				log.Fatalf("accept err:%v", err)
+				continue
+			}
+			log.Println("来请求了...")
+
 			//先判断连接管理器已经创建了多少连接
 			if s.GetConnManager().Len() >= s.MaxConns {
 				log.Fatalf("conns if out of range,len:%d,maxLen:%d", s.GetConnManager().Len(), s.MaxConns)
 				continue
 			}
 
-			conn, err := listener.AcceptTCP()
-			if err != nil {
-				log.Fatalf("accept err:%v", err)
-				continue
-			}
-
 			// 获取请求内容，执行操作
+			log.Println("获取请求内容，执行操作")
 			dealConn := NewGConn(s, conn, util.GetConnId(), s.Handler)
 			go dealConn.Start()
 		}
@@ -97,4 +102,33 @@ func (s *GServer) AddRouter(msgId uint32, router iserver.IRouter) {
 
 func (s *GServer) GetConnManager() iserver.IConnManager {
 	return s.ConnMgr
+}
+
+//设置该Server的连接创建时Hook函数
+func (s *GServer) SetOnConnStart(start func(iserver.IConnection)) {
+	s.OnConnStart = start
+}
+
+//设置该Server的连接断开时的Hook函数
+func (s *GServer) SetOnConnStop(stop func(iserver.IConnection)) {
+	s.OnConnStop = stop
+}
+
+//调用连接OnConnStart Hook函数
+func (s *GServer) CallOnConnStart(conn iserver.IConnection) {
+	log.Println("OnConnStart Hook...")
+	s.OnConnStart(conn)
+}
+
+//调用连接OnConnStop Hook函数
+func (s *GServer) CallOnConnStop(conn iserver.IConnection) {
+	log.Println("OnConnStop Hook...")
+	s.OnConnStop(conn)
+}
+
+func (s *GServer) GetOnConnStart() func(iserver.IConnection) {
+	return s.OnConnStart
+}
+func (s *GServer) GetOnConnStop() func(iserver.IConnection) {
+	return s.OnConnStop
 }

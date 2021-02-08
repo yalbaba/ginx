@@ -14,7 +14,7 @@ func (br *BaseRouter) PreHandle(request iserver.IRequest) {
 }
 
 func (br *BaseRouter) Handle(request iserver.IRequest) {
-	fmt.Println("handle")
+	fmt.Println("BaseRouter")
 
 	//读取数据
 	msgId := request.GetMessageId()

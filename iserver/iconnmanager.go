@@ -1,9 +1,9 @@
 package iserver
 
 type IConnManager interface {
-	Add(conn IConn)
-	Remove(conn IConn)
-	Get(connId uint32) (IConn, error)
+	Add(conn IConnection)
+	Remove(conn IConnection)
+	Get(connId uint32) (IConnection, error)
 	Clean()
 	Len() int
 }
