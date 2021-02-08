@@ -6,9 +6,12 @@ import (
 	"log"
 	"net"
 	"yalbaba/ginx/iserver"
+	"yalbaba/ginx/util/global_conf"
 )
 
 type GConn struct {
+	TcpServer iserver.IServer
+
 	ConnId uint32
 
 	Conn *net.TCPConn
@@ -20,18 +23,23 @@ type GConn struct {
 	//用于写模块接收消息的通道
 	msgChannel chan []byte
 
+	//用于写模块接收消息的通道（带缓冲）
+	msgBuffChannel chan []byte
+
 	//客户端断开连接，关闭当前连接的通道
-	CloseCh chan struct{}
+	closeCh chan struct{}
 }
 
-func NewGConn(conn *net.TCPConn, connId uint32, msgHandler iserver.IMsgHandler) *GConn {
+func NewGConn(s iserver.IServer, conn *net.TCPConn, connId uint32, msgHandler iserver.IMsgHandler) *GConn {
 	return &GConn{
-		ConnId:     connId,
-		Conn:       conn,
-		MsgHandler: msgHandler,
-		isClosed:   false,
-		msgChannel: make(chan []byte),
-		CloseCh:    make(chan struct{}),
+		TcpServer:      s,
+		ConnId:         connId,
+		Conn:           conn,
+		MsgHandler:     msgHandler,
+		isClosed:       false,
+		msgChannel:     make(chan []byte),
+		msgBuffChannel: make(chan []byte, global_conf.GlobalConfObj.MaxMsgBuff),
+		closeCh:        make(chan struct{}),
 	}
 }
 
@@ -95,7 +103,14 @@ func (c *GConn) StartWrite() {
 			log.Fatalf("服务端给客户端写数据失败,err:%v", err)
 			return
 		}
-	case <-c.CloseCh:
+	case data := <-c.msgBuffChannel:
+		//服务端给客户端写数据
+		_, err := c.Conn.Write(data)
+		if err != nil {
+			log.Fatalf("服务端给客户端写数据失败,err:%v", err)
+			return
+		}
+	case <-c.closeCh:
 		return
 	}
 }
@@ -109,19 +124,23 @@ func (c *GConn) Start() {
 }
 
 func (c *GConn) Stop() {
-	if err := c.Conn.Close(); err != nil {
-		fmt.Println("stop err", err.Error())
-		return
-	}
+
 	if c.isClosed {
 		fmt.Println("conn is closed")
 		return
 	}
 
-	c.isClosed = true
-	c.CloseCh <- struct{}{}
+	if err := c.Conn.Close(); err != nil {
+		fmt.Println("stop err", err.Error())
+		return
+	}
 
-	close(c.CloseCh)
+	c.isClosed = true
+	c.closeCh <- struct{}{}
+
+	c.TcpServer.GetConnManager().Remove(c)
+
+	close(c.closeCh)
 	close(c.msgChannel)
 
 }
@@ -139,6 +158,26 @@ func (c *GConn) GetRemoteAddr() net.Addr {
 }
 
 func (c *GConn) SendMsg(msgId uint32, data []byte) error {
+
+	if c.isClosed {
+		return fmt.Errorf("连接已关闭")
+	}
+
+	dp := NewPackage()
+	//对消息进行打包
+	msg := NewMessage(msgId, data)
+	dataByte, err := dp.Pack(msg)
+	if err != nil {
+		return err
+	}
+
+	//发送消息到通道给写数据协程
+	c.msgChannel <- dataByte
+	return nil
+}
+
+func (c *GConn) SendBuffMsg(msgId uint32, data []byte) error {
+
 	if c.isClosed {
 		return fmt.Errorf("连接已关闭")
 	}

@@ -16,12 +16,7 @@ func TestClient(t *testing.T) {
 
 	//构建两个包的内容
 	dp := &server.Package{}
-	msg1 := &server.Message{
-		Id:      1,
-		DataLen: 5,
-		Data:    []byte{'h', 'e', 'l', 'l', 'o'},
-	}
-	send, err := dp.Pack(msg1)
+	send, err := dp.Pack(server.NewMessage(1, []byte("ginx test")))
 	if err != nil {
 		fmt.Println("pack1 err:", err)
 		return

@@ -15,4 +15,6 @@ type IConn interface {
 	GetRemoteAddr() net.Addr
 
 	SendMsg(msgId uint32, data []byte) error
+
+	SendBuffMsg(msgId uint32, data []byte) error //发送缓冲消息
 }

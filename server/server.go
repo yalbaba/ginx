@@ -10,12 +10,13 @@ import (
 )
 
 type GServer struct {
-	Name      string              `json:"name"`
-	IpVersion string              `json:"ip_version"`
-	Addr      string              `json:"addr"`
-	Port      int                 `json:"port"`
-	MaxConns  int                 `json:"max_conns"`
-	Handler   iserver.IMsgHandler //自定义的处理业务
+	Name      string
+	IpVersion string
+	Addr      string
+	Port      int
+	MaxConns  int
+	Handler   iserver.IMsgHandler  //自定义的处理业务
+	ConnMgr   iserver.IConnManager //连接管理器
 }
 
 func NewGServer() *GServer {
@@ -26,6 +27,7 @@ func NewGServer() *GServer {
 		Port:      global_conf.GlobalConfObj.Port,
 		MaxConns:  global_conf.GlobalConfObj.MaxConn,
 		Handler:   NewMsgHandler(),
+		ConnMgr:   NewConnManager(),
 	}
 }
 
@@ -56,6 +58,12 @@ func (s *GServer) Start() {
 
 		// 阻塞获取客户端请求
 		for {
+			//先判断连接管理器已经创建了多少连接
+			if s.GetConnManager().Len() >= s.MaxConns {
+				log.Fatalf("conns if out of range,len:%d,maxLen:%d", s.GetConnManager().Len(), s.MaxConns)
+				continue
+			}
+
 			conn, err := listener.AcceptTCP()
 			if err != nil {
 				log.Fatalf("accept err:%v", err)
@@ -63,14 +71,14 @@ func (s *GServer) Start() {
 			}
 
 			// 获取请求内容，执行操作
-			dealConn := NewGConn(conn, util.GetConnId(), s.Handler)
+			dealConn := NewGConn(s, conn, util.GetConnId(), s.Handler)
 			go dealConn.Start()
 		}
 	}()
 }
 
 func (s *GServer) Stop() {
-	return
+	s.GetConnManager().Clean()
 }
 
 func (s *GServer) Serve() error {
@@ -85,4 +93,8 @@ func (s *GServer) Serve() error {
 
 func (s *GServer) AddRouter(msgId uint32, router iserver.IRouter) {
 	s.Handler.AddRouter(msgId, router)
+}
+
+func (s *GServer) GetConnManager() iserver.IConnManager {
+	return s.ConnMgr
 }

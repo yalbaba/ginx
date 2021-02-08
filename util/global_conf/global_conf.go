@@ -15,21 +15,13 @@ type GlobalConf struct {
 	MaxPackageSize   uint32 `json:"max_package_size"`    //最大传输包大小
 	WorkerPoolSize   uint32 `json:"worker_pool_size"`    //消息队列的工作池数量
 	MaxQueueTaskSize uint32 `json:"max_queue_task_size"` //每个消息队列的最大任务数
+	MaxMsgBuff       int    `json:"max_msg_buff"`
 }
 
 var GlobalConfObj *GlobalConf
 
 func init() {
-	GlobalConfObj = &GlobalConf{
-		Name:             "default_server",
-		Port:             9090,
-		Host:             "127.0.0.1",
-		IpVersion:        "tcp4",
-		MaxConn:          100,
-		MaxPackageSize:   512,
-		WorkerPoolSize:   10,
-		MaxQueueTaskSize: 1024,
-	}
+	GlobalConfObj = &GlobalConf{}
 	GlobalConfObj.Reload()
 }
 
